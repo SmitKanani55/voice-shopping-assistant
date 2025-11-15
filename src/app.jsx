@@ -14,17 +14,52 @@ export default function App() {
   const [transcript, setTranscript] = useState("")
   const [listening, setListening] = useState(false)
   const [suggestion, setSuggestion] = useState("")
+  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(true)
   const recognition = useRef(null)
   const itemsRef = useRef([])
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "items"), snap => {
-      const data = snap.docs.map(d => ({id: d.id, ...d.data()}))
-      setItems(data)
-      itemsRef.current = data
-      if (data.length > 2) setSuggestion(suggestions[Math.floor(Math.random()*suggestions.length)])
-    })
-    return unsub
+    let unsub = null
+    try {
+      unsub = onSnapshot(collection(db, "items"), 
+        snap => {
+          try {
+            const data = snap.docs.map(d => ({id: d.id, ...d.data()}))
+            setItems(data)
+            itemsRef.current = data
+            setLoading(false)
+            if (data.length > 2) setSuggestion(suggestions[Math.floor(Math.random()*suggestions.length)])
+          } catch (e) {
+            console.error("Error processing Firestore data:", e)
+            setError("Error loading items")
+            setLoading(false)
+          }
+        },
+        err => {
+          console.error("Firestore error:", err)
+          setError("Connection error. Please refresh the page.")
+          setLoading(false)
+        }
+      )
+    } catch (e) {
+      console.error("Firebase initialization error:", e)
+      setError("Failed to connect to database")
+      setLoading(false)
+    }
+    
+    // Timeout fallback - show UI even if Firebase is slow
+    const timeout = setTimeout(() => {
+      if (loading) {
+        setLoading(false)
+        console.warn("Firebase connection timeout - showing UI anyway")
+      }
+    }, 3000)
+    
+    return () => {
+      if (unsub) unsub()
+      clearTimeout(timeout)
+    }
   }, [])
 
   useEffect(() => {
@@ -73,8 +108,23 @@ export default function App() {
           }
         })
       })
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(`API error: ${res.status} - ${errorData.error?.message || res.statusText}`)
+      }
+      
       const json = await res.json()
+      
+      if (!json.candidates || !json.candidates[0] || !json.candidates[0].content) {
+        console.error("Unexpected API response:", json)
+        throw new Error("Invalid response from API")
+      }
+      
       const responseText = json.candidates[0].content.parts[0].text
+      if (!responseText) {
+        throw new Error("Empty response from API")
+      }
+      
       const parsed = JSON.parse(responseText)
 
       if (parsed.action === "add") {
@@ -93,11 +143,17 @@ export default function App() {
         }
       }
     } catch (e) {
+      console.error("Process error:", e)
       // simple fallback
-      if (text.includes("add") || text.includes("buy")) {
-        const name = text.split(" ").slice(-1)[0]
-        await addDoc(collection(db, "items"), {name, qty:1, cat:"Other", ts:Date.now()})
-        speak(`Added ${name}`)
+      try {
+        if (text.includes("add") || text.includes("buy")) {
+          const name = text.split(" ").slice(-1)[0]
+          await addDoc(collection(db, "items"), {name, qty:1, cat:"Other", ts:Date.now()})
+          speak(`Added ${name}`)
+        }
+      } catch (fallbackError) {
+        console.error("Fallback error:", fallbackError)
+        speak("Sorry, I couldn't process that")
       }
     }
   }, [])
@@ -108,6 +164,34 @@ export default function App() {
     setListening(!listening)
   }
 
+
+  if (loading) {
+    return (
+      <div className="max-w-md mx-auto p-6">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-center mb-8">Voice Shopping List</h1>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-md mx-auto p-6">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <p className="font-bold">Error</p>
+          <p>{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-2 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-md mx-auto p-6">
