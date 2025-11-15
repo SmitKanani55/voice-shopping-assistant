@@ -19,66 +19,6 @@ export default function App() {
   const recognition = useRef(null)
   const itemsRef = useRef([])
 
-  useEffect(() => {
-    let unsub = null
-    try {
-      unsub = onSnapshot(collection(db, "items"), 
-        snap => {
-          try {
-            const data = snap.docs.map(d => ({id: d.id, ...d.data()}))
-            setItems(data)
-            itemsRef.current = data
-            setLoading(false)
-            if (data.length > 2) setSuggestion(suggestions[Math.floor(Math.random()*suggestions.length)])
-          } catch (e) {
-            console.error("Error processing Firestore data:", e)
-            setError("Error loading items")
-            setLoading(false)
-          }
-        },
-        err => {
-          console.error("Firestore error:", err)
-          setError("Connection error. Please refresh the page.")
-          setLoading(false)
-        }
-      )
-    } catch (e) {
-      console.error("Firebase initialization error:", e)
-      setError("Failed to connect to database")
-      setLoading(false)
-    }
-    
-    // Timeout fallback - show UI even if Firebase is slow
-    const timeout = setTimeout(() => {
-      if (loading) {
-        setLoading(false)
-        console.warn("Firebase connection timeout - showing UI anyway")
-      }
-    }, 3000)
-    
-    return () => {
-      if (unsub) unsub()
-      clearTimeout(timeout)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) return
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    recognition.current = new SpeechRecognition()
-    recognition.current.continuous = true
-    recognition.current.interimResults = true
-
-    recognition.current.onresult = async e => {
-      const last = e.results[e.results.length-1]
-      setTranscript(last[0].transcript)
-      if (last.isFinal) {
-        await process(last[0].transcript.toLowerCase())
-        setTranscript("")
-      }
-    }
-  }, [process])
-
   const speak = (txt) => {
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(txt)
@@ -157,6 +97,69 @@ export default function App() {
       }
     }
   }, [])
+
+  useEffect(() => {
+    let unsub = null
+    try {
+      unsub = onSnapshot(collection(db, "items"), 
+        snap => {
+          try {
+            const data = snap.docs.map(d => ({id: d.id, ...d.data()}))
+            setItems(data)
+            itemsRef.current = data
+            setLoading(false)
+            if (data.length > 2) setSuggestion(suggestions[Math.floor(Math.random()*suggestions.length)])
+          } catch (e) {
+            console.error("Error processing Firestore data:", e)
+            setError("Error loading items")
+            setLoading(false)
+          }
+        },
+        err => {
+          console.error("Firestore error:", err)
+          setError("Connection error. Please refresh the page.")
+          setLoading(false)
+        }
+      )
+    } catch (e) {
+      console.error("Firebase initialization error:", e)
+      setError("Failed to connect to database")
+      setLoading(false)
+    }
+    
+    // Timeout fallback - show UI even if Firebase is slow
+    const timeout = setTimeout(() => {
+      setLoading(prev => {
+        if (prev) {
+          console.warn("Firebase connection timeout - showing UI anyway")
+          return false
+        }
+        return prev
+      })
+    }, 3000)
+    
+    return () => {
+      if (unsub) unsub()
+      clearTimeout(timeout)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) return
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    recognition.current = new SpeechRecognition()
+    recognition.current.continuous = true
+    recognition.current.interimResults = true
+
+    recognition.current.onresult = async e => {
+      const last = e.results[e.results.length-1]
+      setTranscript(last[0].transcript)
+      if (last.isFinal) {
+        await process(last[0].transcript.toLowerCase())
+        setTranscript("")
+      }
+    }
+  }, [process])
 
   const toggle = () => {
     if (listening) recognition.current?.stop()
