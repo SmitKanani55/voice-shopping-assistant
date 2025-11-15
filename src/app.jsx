@@ -53,20 +53,29 @@ export default function App() {
 
   const process = useCallback(async (text) => {
     try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      const apiKey = import.meta.env.VITE_GEMINI_KEY
+      if (!apiKey) {
+        throw new Error("VITE_GEMINI_KEY is not set")
+      }
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer " + import.meta.env.VITE_OPENAI_KEY   // ← this is safe
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [{role: "user", content: `Extract shopping intent, return ONLY JSON {action:"add|remove", name:string, qty:number|null}\n\n"${text}"`}],
-          temperature: 0
+          contents: [{
+            parts: [{
+              text: `Extract shopping intent, return ONLY JSON {action:"add|remove", name:string, qty:number|null}\n\n"${text}"`
+            }]
+          }],
+          generationConfig: {
+            temperature: 0
+          }
         })
       })
       const json = await res.json()
-      const parsed = JSON.parse(json.choices[0].message.content)
+      const responseText = json.candidates[0].content.parts[0].text
+      const parsed = JSON.parse(responseText)
 
       if (parsed.action === "add") {
         await addDoc(collection(db, "items"), {

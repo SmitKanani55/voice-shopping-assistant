@@ -6,7 +6,7 @@
 A fully functional **multilingual voice-controlled shopping list** built in under 7 hours as a technical assessment.
 
 ### Features 
-- Natural language understanding powered by **GPT-4o-mini** ("Add 2 liters of oat milk", "Remove bananas please", "I need organic eggs under $5")  
+- Natural language understanding powered by **Google Gemini 1.5 Flash** ("Add 2 liters of oat milk", "Remove bananas please", "I need organic eggs under $5")  
 - Real-time shopping list synced with **Firebase Firestore**  
 - Automatic item categorization (Dairy, Produce, Bakery, etc.)  
 - Smart suggestions based on history + seasonal tips  
@@ -45,7 +45,7 @@ A fully functional **multilingual voice-controlled shopping list** built in unde
 - React + Vite  
 - Tailwind CSS  
 - Firebase Firestore (realtime database)  
-- OpenAI GPT-4o-mini (intent & entity extraction)  
+- Google Gemini 1.5 Flash (intent & entity extraction)  
 - Web Speech API (speech-to-text)  
 - Vercel (hosting)
 
@@ -61,7 +61,8 @@ npm install
 
 # 3. Add your keys (see below)
 #    - Create a Firebase project → get config → paste into src/firebase.js
-#    - Get OpenAI API key → paste into src/App.jsx (replace YOUR_OPENAI_KEY_HERE)
+#    - Get Gemini API key from https://aistudio.google.com/ → create .env file with:
+#      VITE_GEMINI_KEY=your_gemini_api_key_here
 
 # 4. Start dev server
 npm run dev
