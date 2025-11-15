@@ -1,9 +1,9 @@
 # Voice Shopping Assistant
 
-**Live Demo**: https://your-app-name.vercel.app  
-**30-second Demo Video**: https://github.com/your-username/voice-shopping-assistant/blob/main/demo.mp4
+**Live Demo**: https://voice-shopping-assistant-ten.vercel.app/ 
 
-A fully functional **multilingual voice-controlled shopping list** built in under 7 hours as a technical assessment.
+
+A fully functional **voice-controlled shopping list**.
 
 ### Features 
 - Natural language understanding powered by **Google Gemini 1.5 Flash** ("Add 2 liters of oat milk", "Remove bananas please", "I need organic eggs under $5")  
